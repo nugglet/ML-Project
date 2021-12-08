@@ -30,7 +30,6 @@ def estimate_e(data):
 
     for y in total_count.keys():
         e[(y, unk_token)] = k / (total_count[y]+k)
-
     return e, list(total_count.keys())
 
 
@@ -101,6 +100,7 @@ def eval_script(preds, gold):
 
 
 def estimate_q(data):
+    # Estimates transition params based on MLE
     k = 1
     q = {}
     transition_count = {}
@@ -126,17 +126,20 @@ def estimate_q(data):
 
     for transition, count in transition_count.items():
         q[transition] = count/total_count[transition[1]]
+
+    # print(q)
     return q
 
 
-def viterbi(data, e, q, cat):
-    predictions = []  # array for best probabilities
+def viterbi2(data, e, q, cat):
+    predictions = []
 
-    for idx in range(len(data)):
-        sentence = data[idx]
+    for index in range(len(data)):
+        sentence = data[index]
 
         pi = []
         parents = []
+
         for word_index in range(len(sentence)+1):
             if word_index < len(sentence):
                 current_word = sentence[word_index]
@@ -145,16 +148,44 @@ def viterbi(data, e, q, cat):
 
             prev_word = sentence[word_index -
                                  1] if word_index-1 >= 0 else "START"
-            print(f'Cur {current_word}, prev {prev_word}')
+
             node_parent = []
             node_value = []
+
+            for cat
+
+
+def viterbi(data, e, q, cat):
+    predictions = []  # array for best probabilities
+
+    error_log = []
+
+    for idx in range(len(data)):
+        sentence = data[idx]
+
+        pi = []
+        parents = []
+
+        for word_index in range(len(sentence)+1):
+            if word_index < len(sentence):
+                current_word = sentence[word_index]
+            else:
+                current_word = "STOP"
+
+            prev_word = sentence[word_index -
+                                 1] if word_index-1 >= 0 else "START"
+
+            #print(f'Cur {current_word}, prev {prev_word}')
+            node_parent = []
+            node_value = []
+
             for cat_index_current in range(len(cat)):
                 max_pi = 0
                 parent = None
                 for cat_index_prev in range(len(cat)):
                     prev_pi = pi[word_index -
-                                 1][cat_index_prev] if word_index-1 >= 0 else 1
-                    #print("HERE", cat[cat_index_current], current_word)
+                                 1][cat_index_prev] if word_index-1 >= 0 else 1  # START (-1) La (0)
+                    # print("HERE", cat[cat_index_current], current_word)
                     if current_word == "STOP":
                         current_e = 1
                     else:
@@ -164,7 +195,7 @@ def viterbi(data, e, q, cat):
                             current_e = e[cat[cat_index_current], "#UNK#"]
 
                     try:
-                        if current_word == "START":
+                        if prev_word == "START":
                             current_q = q[(cat[cat_index_current], "START")]
                         elif current_word == "STOP":
                             current_q = q[("STOP", cat[cat_index_prev])]
@@ -172,29 +203,35 @@ def viterbi(data, e, q, cat):
                             current_q = q[(cat[cat_index_current],
                                            cat[cat_index_prev])]
                     except KeyError as error:
-                        # print(error)
+                        # if state sequence is not in training set
+                        error_log.append(
+                            (cat[cat_index_current], cat[cat_index_prev]))
                         current_q = 0
                     current_pi = prev_pi * current_q * current_e
-                    if current_pi > max_pi:
+                    if current_pi >= max_pi:
                         parent = cat_index_prev
                         max_pi = current_pi
                 node_value.append(max_pi)
                 node_parent.append(parent)
+                # print(node_parent)
             pi.append(node_value)
             parents.append(node_parent)
 
         prediction = []
         for parent in reversed(parents):
+            # print(parent)
             if len(prediction) == 0:
                 prediction.append(parent[0])
             else:
                 prediction.append(parent[prediction[-1]])
+            predictions.append(prediction)
 
-        predictions.append(prediction)
+    # print(set(error_log))
     return predictions
 
 
 def get_testing_data(path):
+    # returns a 2D array of words and its corresponding transition state for each sentence
     with open(path, encoding='utf-8') as f:
         raw = f.read()
         # array of sentences
@@ -202,8 +239,11 @@ def get_testing_data(path):
 
     clean = []
     for sentence in sentences:
+        # append array of words and corresponding transition
         clean.append(sentence.split('\n'))
     return clean
+
+# Part 3
 
 
 # ============= START OF SCRIPT ===============
@@ -223,9 +263,12 @@ if __name__ == '__main__':
     print("cat", cat)
 
     # predict_label(f'{directory}/dev.in', e, cat)
-    # print('TEST",eval_script(f'{directory}/dev.p1.out', f'{directory}/dev.out'))
+    # print('TEST', eval_script(
+    #    f'{directory}/dev.p1.out', f'{directory}/dev.out'))
 
+    # Part 2
     q = estimate_q(data)
+    print(q)
 
     # dev = open(f'{directory}/dev.in', encoding='utf-8')
     # dev_in = [line for line in dev.readlines()]
@@ -233,4 +276,4 @@ if __name__ == '__main__':
 
     test_data = get_testing_data(f'{directory}/dev.in')
     predictions = viterbi(test_data, e, q, cat)
-    print(predictions)
+    # print(predictions)

@@ -215,7 +215,7 @@ def compare_observed_to_predicted(observed, predicted):
     printResult('Sentiment', correct_sentiment, prec, rec)
 
 
-##############Main Function##################
+#=======================================  Main Function  ========================================#
 
 if __name__ == '__main__':
 
