@@ -29,6 +29,8 @@ class HMM():
         flattened_list = [item for sublist in nested_list for item in sublist]
         return sorted(list(set(flattened_list)))
 
+    # Part 1
+    # Estimate the emission table
     def estimate_e(self):
         e_table = np.zeros((len(self.unique_labels), len(self.unique_tokens)))
         for _, (token, label) in enumerate(zip(self.tokens, self.labels)):
@@ -39,10 +41,23 @@ class HMM():
         e_table /= e_table.sum(axis=1)[:, np.newaxis]
         return e_table
 
+    # Part 2
+    # Outputs a 8x8 matrix of the transition table in the format
+    # Matrix is indexed by position number and not label i.e. [0,0] -> START-B-neg
+    # []        [B-negative][B-neutral][B-positive][I-negative][I-neutral][I-positive][O][STOP]
+    # [START]
+    # [B-negative]
+    # [B-neutral]
+    # [B-positive]
+    # [I-negative]
+    # [I-neutral]
+    # [I-positive]
+    # [O]
+
     def estimate_q(self):
 
         cats = self.unique_labels.copy()
-        cats.insert(0, 'START')
+        cats.insert(0, "START")
         cats.append("STOP")
         self.cats = cats
 
@@ -66,9 +81,12 @@ class HMM():
         for yi_1 in range(0, len(cats)-1):
             for yi in range(1, len(cats)):
                 q_table[yi_1, yi] = trans_counts[yi_1, yi]/total_counts[yi_1]
-
+        # remove START column and STOP row
+        q_table = q_table[:-1, 1:]
         return q_table
 
+    # Part 1
+    # Predict labels using the emission table
     def predict_e(self, e_table, input_path, output_path):
         predict_label = []
         x = self.get_test_data(input_path)
@@ -91,28 +109,30 @@ class HMM():
                     outp.write(result)
                 outp.write('\n')
 
+    # Part 2
+    # Predict labels using both emission and transition tables with the viterbi algorithm
     def viterbi(self, q, e, Pi=None):
         # https://stackoverflow.com/questions/9729968/python-implementation-of-viterbi-algorithm
 
         K = q.shape[0]
         Pi = Pi if Pi is not None else np.full(K, 1/K)
-        T = len(self.cats)
+        T = len(self.unique_labels)
         # the probability of the most likely path so far
-        T1 = np.empty((K, T), 'd')
-        T2 = np.empty((K, T), 'B')  # the x_j-1 of the most likely path so far
+        T1 = np.empty((K, T))
+        T2 = np.empty((K, T))  # the x_j-1 of the most likely path so far
 
         # Initilaize the tracking tables from first observation
-        T1[:, 0] = Pi * e[:, self.cats[0]]
+        T1[:, 0] = Pi * e[:, self.unique_labels[0]]
         2[:, 0] = 0
 
-        # Iterate throught the observations updating the tracking tables
+        # Iterate through the observations updating the tracking tables
         for i in range(1, T):
             T1[:, i] = np.max(T1[:, i - 1] * q.T *
-                              e[np.newaxis, :, self.cats[i]].T, 1)
+                              e[np.newaxis, :, self.unique_labels[i]].T, 1)  # cats or unique l
             T2[:, i] = np.argmax(T1[:, i - 1] * q.T, 1)
 
         # Build the output, optimal model trajectory
-        x = np.empty(T, 'B')
+        x = np.empty(T)
         x[-1] = np.argmax(T1[:, T - 1])
         for i in reversed(range(1, T)):
             x[i - 1] = T2[x[i], i]
@@ -124,8 +144,10 @@ hmm = HMM()
 es_directory = 'ES/ES'
 ru_directory = 'RU/RU'
 hmm.get_data(f'{es_directory}/train')
-hmm.estimate_e()
+e = hmm.estimate_e()
+q = hmm.estimate_q
 # print(hmm.unique_tokens)
-
 # print(hmm.estimate_q())
-print(hmm.viterbi())
+# print(hmm.viterbi())
+x, T1, T2 = hmm.viterbi(q=q, e=e)
+print(x)

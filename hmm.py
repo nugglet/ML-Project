@@ -152,7 +152,99 @@ def viterbi2(data, e, q, cat):
             node_parent = []
             node_value = []
 
-            for cat
+
+def viterbi_5thbest(self, sentence):
+
+    rank = 5
+    # Initialisation step
+    n = len(sentence)
+    sentence = [None] + sentence
+    m = len(self.unique_labels)
+    pi = np.zeros((n+2, m, rank))
+
+    # Forward algorithm
+    for j in range(n):
+        if sentence[j+1] in self.unique_tokens:
+            cur_word = sentence[j+1]
+        else:
+            cur_word = self.unk_token
+
+        for cur_index in range(0, m):
+            current_e = self.e_table[cur_index,
+                                     self.unique_tokens.index(cur_word)]
+            if (j == 0):
+                current_q = self.q_table[0, cur_index]
+                pi[j+1, cur_index, 0] = 1 * current_e * current_q
+            else:
+                max_probs = []
+                for prev_index in range(0, m):
+                    for r in range(rank):
+                        current_q = self.q_table[prev_index+1, cur_index]
+                        cur_prob = pi[j, prev_index, r] * current_q
+                        current_e * current_q
+
+                        max_probs.append(cur_prob)
+                max_probs.sort(reverse=True)
+                if len(max_probs) > 5:
+                    max_probs = max_probs[: 5]
+                pi[j+1, cur_index] = max_probs
+
+    # Termination step
+    max_probs = []
+    for prev_index in range(0, m):
+        for r in range(rank):
+            current_q = self.q_table[prev_index+1, -1]
+            cur_prob = pi[-1, prev_index, r] * current_q
+            max_probs.append(cur_prob)
+
+    max_probs.sort(reverse=True)
+    if len(max_probs) > 5:
+        max_probs = max_probs[: 5]
+    pi[n+1, -1] = max_probs
+
+    # Backward algorithm
+    yxs = []
+
+    def take_last(elem):
+        return elem[-1]
+
+    for cur_index in range(0, m):
+        for r in range(rank):
+
+            current_q = self.q_table[cur_index+1, -1]
+            cur_prob = pi[n, cur_index, r] * current_q
+
+            yxs.append([cur_index, cur_prob])
+    yxs.sort(reverse=True, key=take_last)
+
+    def removeRepeated(lst):
+        new = []
+        for elem in lst:
+            if elem not in new:
+                new.append(elem)
+        return new
+
+    yxs = removeRepeated(yxs)
+
+    if len(yxs) > 5:
+        yxs = yxs[: 5]
+
+    for j in range(n-1, 0, -1):
+        max_probs = []
+        for yx in yxs:
+            for cur_index in range(0, m):
+                for r in range(rank):
+                    current_q = self.q_table[cur_index+1, yx[0]]
+                    cur_prob = pi[j, cur_index, r] * current_q
+
+                    max_probs.append([cur_index] + yx[: -1] + [cur_prob])
+        max_probs.sort(reverse=True, key=take_last)
+        yxs = max_probs
+        if len(yxs) > 5:
+            yxs = yxs[: 5]
+
+    labelled_preds = [self.unique_labels[y] for y in yxs[4][:-1]]
+    return labelled_preds
 
 
 def viterbi(data, e, q, cat):
@@ -175,7 +267,7 @@ def viterbi(data, e, q, cat):
             prev_word = sentence[word_index -
                                  1] if word_index-1 >= 0 else "START"
 
-            #print(f'Cur {current_word}, prev {prev_word}')
+            # print(f'Cur {current_word}, prev {prev_word}')
             node_parent = []
             node_value = []
 
